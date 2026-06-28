@@ -10,6 +10,9 @@ This repository is a developer-focused bootstrap kit for building, testing, and 
 
 👉 **[Launch the Interactive OpenShell Sandbox & Telemetry Portal Live!](https://karidasd.github.io/nvidia-openshell-agent-bootstrap/)**
 
+> [!IMPORTANT]
+> **Disclaimer**: This is an independent, community-driven open-source project. It is not affiliated with, sponsored by, or endorsed by NVIDIA Corporation. NVIDIA, DGX, Grace Blackwell, and OpenShell are trademarks of NVIDIA Corporation.
+
 ---
 
 ## 💡 The Problem: Cloud Token Costs & Data Exfiltration Risks

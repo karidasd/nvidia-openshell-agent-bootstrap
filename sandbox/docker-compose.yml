@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: openshell-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  openshell-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: openshell-agent-runner
+    depends_on:
+      - ollama
+    volumes:
+      - ../:/workspace
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    entrypoint: ["python3", "/workspace/src/main.py"]
+    restart: on-failure
+
+volumes:
+  ollama_data:

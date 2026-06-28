@@ -25,6 +25,7 @@
             --clr-blue-glow: rgba(0, 180, 216, 0.2);
             --clr-error: #ff5f56;
             --clr-success: #00e676;
+            --clr-success-glow: rgba(0, 230, 118, 0.2);
         }
 
         * {
@@ -56,10 +57,10 @@
             padding: 2rem 1.5rem;
         }
 
-        /* Hero */
+        /* Header / Hero */
         .hero {
             text-align: center;
-            padding: 3rem 1rem;
+            padding: 3rem 1rem 2rem;
             position: relative;
         }
 
@@ -77,7 +78,52 @@
             color: var(--text-muted);
             font-size: 1.15rem;
             max-width: 750px;
-            margin: 0 auto 2rem;
+            margin: 0 auto 1.5rem;
+        }
+
+        /* Status Badges Row */
+        .status-row {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+            flex-wrap: wrap;
+        }
+
+        .status-badge {
+            background-color: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-card);
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-badge .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-badge.online .dot {
+            background-color: var(--clr-success);
+            box-shadow: 0 0 8px var(--clr-success-glow);
+            animation: pulseDot 1.5s infinite;
+        }
+
+        .status-badge.success .dot {
+            background-color: var(--clr-nvidia);
+            box-shadow: 0 0 8px var(--clr-nvidia-glow);
+        }
+
+        @keyframes pulseDot {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
         }
 
         /* Pitch / ROI highlight */
@@ -402,6 +448,61 @@
             padding-top: 1.5rem;
             text-align: center;
         }
+
+        /* Architecture and Substack Feed styling */
+        .substack-feed-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 750px) {
+            .substack-feed-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .substack-post-card {
+            background-color: rgba(255,255,255,0.01);
+            border: 1px solid var(--border-card);
+            padding: 1.5rem;
+            border-radius: 12px;
+            transition: all 0.3s;
+        }
+
+        .substack-post-card:hover {
+            border-color: var(--clr-nvidia);
+            background-color: rgba(118, 185, 0, 0.02);
+            transform: translateY(-2px);
+        }
+
+        .substack-meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .substack-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: white;
+        }
+
+        .architecture-flowchart {
+            background-color: rgba(0,0,0,0.25);
+            border: 1px solid var(--border-card);
+            padding: 1.5rem;
+            border-radius: 12px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            color: #d4d4d4;
+            overflow-x: auto;
+            white-space: pre;
+        }
     </style>
 </head>
 <body>
@@ -411,6 +512,22 @@
             <h1>NVIDIA DGX Spark & OpenShell</h1>
             <p>Deploy secure, autonomous AI & Data Science agents locally on desktop hardware. Avoid cloud subscription leaks and thousands of euros in monthly API token bills.</p>
         </header>
+
+        <!-- Live Status Badges -->
+        <div class="status-row">
+            <div class="status-badge online">
+                <span class="dot"></span>
+                <span>Local Agent Status: <strong style="color: var(--clr-success);">ONLINE</strong></span>
+            </div>
+            <div class="status-badge success">
+                <span class="dot"></span>
+                <span>Last Build: <strong style="color: var(--clr-nvidia);">SUCCESS</strong></span>
+            </div>
+            <div class="status-badge">
+                <i class="fa-solid fa-server" style="color: var(--clr-blue);"></i>
+                <span>Local LLM: <strong style="color: var(--text-main);">Llama-3-70B (Ollama)</strong></span>
+            </div>
+        </div>
 
         <!-- Zero-Token Pitch Grid -->
         <section class="pitch-grid">
@@ -442,7 +559,9 @@
             <button class="tab-btn active" data-tab="telemetry"><i class="fa-solid fa-gauge-high"></i> Hardware Telemetry</button>
             <button class="tab-btn" data-tab="policies"><i class="fa-solid fa-shield-halved"></i> OpenShell Policies</button>
             <button class="tab-btn" data-tab="terminal"><i class="fa-solid fa-terminal"></i> Sandbox Terminal</button>
-            <button class="tab-btn" data-tab="roi"><i class="fa-solid fa-calculator"></i> ROI Calculator</button>
+            <button class="tab-btn" data-tab="roi"><i class="fa-solid fa-coins"></i> ROI Calculator</button>
+            <button class="tab-btn" data-tab="architecture"><i class="fa-solid fa-sitemap"></i> Agent Architecture</button>
+            <button class="tab-btn" data-tab="substack"><i class="fa-solid fa-newspaper"></i> Substack Newsletter</button>
         </nav>
 
         <!-- Tab 1: Telemetry -->
@@ -599,6 +718,60 @@
                 </div>
             </div>
         </section>
+
+        <!-- Tab 5: Architecture Flowchart -->
+        <section class="tab-panel" id="panel-architecture">
+            <div class="glass-card">
+                <h2 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-sitemap"></i> NVIDIA OpenShell Agent Sandboxing Flow</h2>
+                <p style="color: var(--text-muted); margin-bottom: 2rem; font-size: 0.95rem;">Understand the execution hierarchy of OpenShell wrapping local CLI agent tasks inside kernel namespaces.</p>
+                
+                <div class="architecture-flowchart">
+[Autonomous AI Agent Request]
+         │
+         ▼
+[OpenShell Interception Daemon]
+         │
+         ├─► [Process Monitor] ────► checks allowed_binaries ────► IF NOT ALLOWED ──► 🛑 BLOCK Execution
+         │
+         ├─► [Landlock FS hook] ───► checks allowed_read/write ──► IF BLACKLISTED ──► 🛑 BLOCK Syscall
+         │
+         └─► [Netfilter filter] ───► checks network.egress ──────► IF NOT DOMAIN   ──► 🛑 BLOCK TCP Connect
+                 │
+                 ▼
+     [PERMITTED: Executed locally on local Llama-3-70B model via Triton/Ollama]
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 6: Substack Feed -->
+        <section class="tab-panel" id="panel-substack">
+            <div class="glass-card">
+                <h2 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-rss"></i> Substack Newsletter Draft Feed</h2>
+                <p style="color: var(--text-muted); margin-bottom: 2.5rem; font-size: 0.95rem;">Read automated logs and newsletter drafts compiled locally by the AI agent and pushed directly to Substack via GitHub Actions.</p>
+
+                <div class="substack-feed-grid">
+                    <div class="substack-post-card">
+                        <div class="substack-meta">
+                            <span><i class="fa-solid fa-calendar-days"></i> June 28, 2026</span>
+                            <span><i class="fa-solid fa-user"></i> Local AI Agent</span>
+                        </div>
+                        <h3 class="substack-title">Log Entry #2: Automated compliance auditing showing 0 PII leaks</h3>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">Our data auditor agent audited 10,250 records, identifying and masking 15 social security leaks completely offline. Compute Cost: €0.00.</p>
+                        <span style="font-size: 0.8rem; color: var(--clr-nvidia); font-weight: bold;">Status: Draft sent to Substack</span>
+                    </div>
+
+                    <div class="substack-post-card">
+                        <div class="substack-meta">
+                            <span><i class="fa-solid fa-calendar-days"></i> June 27, 2026</span>
+                            <span><i class="fa-solid fa-user"></i> Local AI Agent</span>
+                        </div>
+                        <h3 class="substack-title">Log Entry #1: Agent successfully refactored 3 files under 2.5 seconds</h3>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">The secure software coder agent refactored core database connections, executed python tests in Landlock, and pushed main branch updates.</p>
+                        <span style="font-size: 0.8rem; color: var(--clr-nvidia); font-weight: bold;">Status: Published</span>
+                    </div>
+                </div>
+            </div>
+        </section>
     </div>
 
     <script>
@@ -629,18 +802,15 @@
         let baseRam = 18;
 
         function generateSvgPath(heightMultiplier) {
-            // Generate a random-looking wave that spikes depending on load heightMultiplier (0 to 1)
             let pathStr = "M 0 80 ";
             let segments = 10;
             let step = 500 / segments;
             
             for (let i = 1; i <= segments; i++) {
                 let x = i * step;
-                // Generate a random frequency offset
                 let yOffset = (Math.random() * 40 - 20) * heightMultiplier;
                 let y = 80 - (heightMultiplier * 50) + yOffset;
                 
-                // Keep y inside bounds
                 y = Math.min(95, Math.max(5, y));
                 
                 let cp1x = x - (step / 2);
@@ -659,7 +829,6 @@
             ramGauge.innerText = `${ramLoad} GB`;
             threadsGauge.innerText = activeThreads;
 
-            // Update SVG Wave Path based on active GPU load
             const multiplier = gpuLoad / 100;
             gpuChartPath.setAttribute("d", generateSvgPath(multiplier));
         }

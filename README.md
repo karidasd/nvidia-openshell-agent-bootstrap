@@ -1,5 +1,9 @@
 # NVIDIA DGX Spark & OpenShell Agent Bootstrap Kit
 
+<p align="center">
+  <img src="assets/openshell_logo.png" alt="NVIDIA OpenShell Logo" width="180px" />
+</p>
+
 🚀 **The Zero-Token Desktop AI & Data Science Supercomputer Setup.**
 
 This repository is a developer-focused bootstrap kit for building, testing, and deploying secure, autonomous AI agents locally on **NVIDIA DGX Spark** workstations utilizing the **NVIDIA OpenShell** sandboxed runtime.
@@ -38,7 +42,7 @@ By running open-source models (like Llama-3.1-70B, DeepSeek-Coder-V2, or Nemotro
 
 ---
 
-## ⚙️ OpenShell Validation Pipeline (Security Flow)
+## ⚙️ OpenShell Guardrails Validation Pipeline
 
 When an autonomous agent attempts an interface operation on the host, the OpenShell kernel-level validation flow executes:
 
@@ -73,6 +77,34 @@ When an autonomous agent attempts an interface operation on the host, the OpenSh
     *   [main.py](src/main.py): Local CLI test simulation.
     *   [policy_generator.py](src/policy_generator.py): Dynamic CLI prompt generator for custom policies.
 *   `index.html`: Interactive developer dashboard showing Blackwell telemetry, policy selectors, and a real-time guardrail shell validator.
+
+---
+
+## 🔧 Configuring Local Inference Backends
+
+To run open-source models locally in your DGX Spark memory, bind local engines (vLLM, Triton Server, or Ollama) to your OpenShell `inference.routes` configurations.
+
+### 1. Start your local inference server (vLLM Example)
+Launch the server binding to your workstation GPUs:
+```bash
+python3 -m vllm.entrypoints.openai.api_server \
+    --model solidrust/Llama-3-70B-Instruct-GGUF \
+    --port 8000 \
+    --tensor-parallel-size 1
+```
+
+### 2. Configure OpenShell Privacy Routing
+Inside your YAML policy file, direct target wildcard queries to the local endpoint:
+```yaml
+inference:
+  backends:
+    local-nemotron:
+      url: http://localhost:8000/v1
+      api_key: local-auth-token
+  routes:
+    - pattern: '*'
+      backend: local-nemotron
+```
 
 ---
 

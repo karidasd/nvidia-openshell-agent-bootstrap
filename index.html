@@ -469,6 +469,16 @@
                     </div>
                 </div>
 
+                <!-- Live Core Wave Graph -->
+                <div class="glass-card" style="margin-top: 2rem; background-color: rgba(0,0,0,0.15); border: 1px solid var(--border-card);">
+                    <h4 style="margin-bottom: 0.8rem; font-size: 0.9rem; color: var(--clr-nvidia); text-transform: uppercase; letter-spacing: 0.05em;"><i class="fa-solid fa-wave-square"></i> Blackwell GPU Real-time Core Frequency Wave</h4>
+                    <div style="height: 120px; overflow: hidden; background-color: rgba(0,0,0,0.3); border-radius: 10px; border: 1px solid rgba(255,255,255,0.03);">
+                        <svg id="gpu-chart-svg" viewBox="0 0 500 100" preserveAspectRatio="none" style="width: 100%; height: 100%;">
+                            <path id="gpu-chart-path" d="M 0 80 Q 50 80 100 80 T 200 80 T 300 80 T 400 80 T 500 80" fill="none" stroke="#76b900" stroke-width="2" style="transition: d 0.5s ease;"></path>
+                        </svg>
+                    </div>
+                </div>
+
                 <div style="text-align: center; margin-top: 2rem;">
                     <button class="terminal-btn" id="run-model-btn" style="background-color: var(--clr-nvidia); color: #000; padding: 0.8rem 1.8rem; font-size: 1rem;"><i class="fa-solid fa-circle-play"></i> Query Local Model (Llama-3-70B)</button>
                     <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Clicking triggers local offline inference, increasing GPU loads and memory allocations momentarily.</p>
@@ -484,19 +494,24 @@
 
                 <div class="editor-grid">
                     <!-- Config Options -->
-                    <div style="display: flex; flex-direction: column; gap: 1rem;">
-                        <label for="policy-preset-select" style="font-weight: 600;">Load Sandbox Profile Template:</label>
-                        <select id="policy-preset-select" style="padding: 0.7rem; border-radius: 8px; border: 1px solid var(--border-card); background-color: #0a0715; color: white; cursor: pointer;">
-                            <option value="coder">Strict Software Coder Agent (python/node write limits)</option>
-                            <option value="auditor">Air-Gapped Data Science Auditor (fully blocks network exfiltration)</option>
-                            <option value="scraper">Web Ingestion Scraper (restricts network to HuggingFace/arXiv)</option>
-                        </select>
+                    <div style="display: flex; flex-direction: column; justify-content: space-between;">
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <label for="policy-preset-select" style="font-weight: 600;">Load Sandbox Profile Template:</label>
+                            <select id="policy-preset-select" style="padding: 0.7rem; border-radius: 8px; border: 1px solid var(--border-card); background-color: #0a0715; color: white; cursor: pointer;">
+                                <option value="coder">Strict Software Coder Agent (python/node write limits)</option>
+                                <option value="auditor">Air-Gapped Data Science Auditor (fully blocks network exfiltration)</option>
+                                <option value="scraper">Web Ingestion Scraper (restricts network to HuggingFace/arXiv)</option>
+                            </select>
 
-                        <div style="background-color: rgba(255,255,255,0.01); border: 1px solid var(--border-card); padding: 1.2rem; border-radius: 12px; font-size: 0.85rem; color: var(--text-muted);">
-                            <h4 style="color: white; margin-bottom: 0.5rem;"><i class="fa-solid fa-circle-info"></i> How OpenShell Sandboxing Works</h4>
-                            <p>OpenShell utilizes Linux **Landlock** filesystem restrictions to prevent AI agents from reading sensitive system directory configurations, ssh credentials, or .env project parameters.</p>
-                            <p style="margin-top: 0.5rem;">It also hooks the network stack at the process level, allowing network calls to be blocked or routed dynamically.</p>
+                            <div style="background-color: rgba(255,255,255,0.01); border: 1px solid var(--border-card); padding: 1.2rem; border-radius: 12px; font-size: 0.85rem; color: var(--text-muted);">
+                                <h4 style="color: white; margin-bottom: 0.5rem;"><i class="fa-solid fa-circle-info"></i> How OpenShell Sandboxing Works</h4>
+                                <p>OpenShell utilizes Linux **Landlock** filesystem restrictions to prevent AI agents from reading sensitive system directory configurations, ssh credentials, or .env project parameters.</p>
+                                <p style="margin-top: 0.5rem;">It also hooks the network stack at the process level, allowing network calls to be blocked or routed dynamically.</p>
+                            </div>
                         </div>
+
+                        <!-- Policy Export Button -->
+                        <button class="terminal-btn" id="download-policy-btn" style="margin-top: 1.5rem; width: 100%;"><i class="fa-solid fa-download"></i> Export and Download Policy YAML</button>
                     </div>
 
                     <!-- Editor code window -->
@@ -602,24 +617,51 @@
             });
         });
 
-        // Telemetry Simulation
+        // Telemetry Simulation & SVG Wave Path generator
         const gpuGauge = document.getElementById("gpu-gauge");
         const ramGauge = document.getElementById("ram-gauge");
         const threadsGauge = document.getElementById("threads-gauge");
         const runModelBtn = document.getElementById("run-model-btn");
+        const gpuChartPath = document.getElementById("gpu-chart-path");
 
         let activeThreads = 2;
         let baseGpu = 12;
         let baseRam = 18;
 
+        function generateSvgPath(heightMultiplier) {
+            // Generate a random-looking wave that spikes depending on load heightMultiplier (0 to 1)
+            let pathStr = "M 0 80 ";
+            let segments = 10;
+            let step = 500 / segments;
+            
+            for (let i = 1; i <= segments; i++) {
+                let x = i * step;
+                // Generate a random frequency offset
+                let yOffset = (Math.random() * 40 - 20) * heightMultiplier;
+                let y = 80 - (heightMultiplier * 50) + yOffset;
+                
+                // Keep y inside bounds
+                y = Math.min(95, Math.max(5, y));
+                
+                let cp1x = x - (step / 2);
+                let cp1y = y;
+                
+                pathStr += `Q ${cp1x} ${cp1y} ${x} ${y} `;
+            }
+            return pathStr;
+        }
+
         function updateTelemetry() {
-            // Add subtle fluctuation
             const gpuLoad = Math.min(100, Math.max(0, Math.floor(baseGpu + (Math.random() * 6 - 3))));
             const ramLoad = Math.min(128, Math.max(0, Math.floor(baseRam + (Math.random() * 2 - 1))));
             
             gpuGauge.innerText = `${gpuLoad}%`;
             ramGauge.innerText = `${ramLoad} GB`;
             threadsGauge.innerText = activeThreads;
+
+            // Update SVG Wave Path based on active GPU load
+            const multiplier = gpuLoad / 100;
+            gpuChartPath.setAttribute("d", generateSvgPath(multiplier));
         }
 
         setInterval(updateTelemetry, 1500);
@@ -627,8 +669,8 @@
         runModelBtn.addEventListener("click", () => {
             runModelBtn.disabled = true;
             activeThreads++;
-            baseGpu = 85;
-            baseRam = 48;
+            baseGpu = 88;
+            baseRam = 52;
             updateTelemetry();
 
             setTimeout(() => {
@@ -662,6 +704,7 @@
         const policySelect = document.getElementById("policy-preset-select");
         const policyTitle = document.getElementById("policy-filename-title");
         const policyContent = document.getElementById("policy-yaml-content");
+        const downloadPolicyBtn = document.getElementById("download-policy-btn");
 
         function loadPresetPolicy() {
             const data = policyPresets[policySelect.value];
@@ -673,6 +716,22 @@
 
         policySelect.addEventListener("change", loadPresetPolicy);
         window.addEventListener("DOMContentLoaded", loadPresetPolicy);
+
+        // Download Policy Trigger
+        downloadPolicyBtn.addEventListener("click", () => {
+            const currentYaml = policyContent.value;
+            const currentName = policyTitle.innerText;
+            
+            const blob = new Blob([currentYaml], { type: "text/yaml;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            link.href = url;
+            link.setAttribute("download", currentName);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
 
         // Terminal Simulator
         const termBody = document.getElementById("term-body");

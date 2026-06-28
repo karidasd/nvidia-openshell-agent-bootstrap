@@ -26,50 +26,83 @@ By running open-source models (like Llama-3.1-70B, DeepSeek-Coder-V2, or Nemotro
 
 ---
 
+## 📊 Comparison: Local DGX Spark Workstation vs. Cloud API Teams
+
+| Metric | Cloud API Integration (GPT-4o/Claude) | Local NVIDIA DGX Spark Setup |
+| :--- | :--- | :--- |
+| **Token Cost (per 1M tokens)**| ~ €2.50 - €15.00 | **€0.00 (Unlimited)** |
+| **Average Monthly Cost** | ~ €2,400+ (Scaling with agent steps) | **€0 (Fixed hardware cost only)** |
+| **Data Privacy** | Sensitive code/data leaves the building | **100% Air-Gapped / In-memory** |
+| **Agent Shell Execution** | Exposed (Vulnerable to host takeover) | **Secured via OpenShell Sandboxing** |
+| **Inference Latency** | Network dependent (2s - 10s calls) | **In-memory Blackwell high-speed bus** |
+
+---
+
+## ⚙️ OpenShell Validation Pipeline (Security Flow)
+
+When an autonomous agent attempts an interface operation on the host, the OpenShell kernel-level validation flow executes:
+
+```text
+[Agent Invocation]
+       │
+       ▼
+[Requested Action: e.g., cat /etc/hosts]
+       │
+       ├─► 1. Check Binary allowed_binaries? ────► [NO] ──► 🛑 BLOCKED (Permission Denied)
+       │                                                         │
+       ├─► 2. Check File allowed_read/write? ───► [NO] ──► 🛑 BLOCKED (Landlock Exception)
+       │                                                         │
+       └─► 3. Check Network egress domain? ──────► [NO] ──► 🛑 BLOCKED (Connection Refused)
+               │
+              [YES]
+               │
+               ▼
+   [ACTION PERMITTED & LOGGED]
+```
+
+---
+
 ## 📁 Repository Structure
 
 *   `policies/`: Declarative YAML security policies governing system access boundaries.
-    *   [secure-coder-policy.yaml](policies/secure-coder-policy.yaml): Strict read/write limits for software engineering tasks.
-    *   [data-auditor-policy.yaml](policies/data-auditor-policy.yaml): A fully air-gapped security profile for local data science.
-    *   [autonomous-scraper-policy.yaml](policies/autonomous-scraper-policy.yaml): restircts network egress solely to HuggingFace or arXiv.
+    *   [secure-coder-policy.yaml](policies/secure-coder-policy.yaml): restricts read/write files to the workspace src/ directories, blocks access to `.env` or SSH keys, and whitelist egress only to allowed package registries.
+    *   [data-auditor-policy.yaml](file:///C:/Users/karid/.gemini/antigravity/scratch/nvidia-openshell-agent-bootstrap/policies/data-auditor-policy.yaml): An air-gapped security profile with empty network egress arrays, forcing all model calls to local, offline inference backends.
+    *   [autonomous-scraper-policy.yaml](file:///C:/Users/karid/.gemini/antigravity/scratch/nvidia-openshell-agent-bootstrap/policies/autonomous-scraper-policy.yaml): Restricts file writes to a scraping raw folder and limits outbound requests strictly to HuggingFace or arXiv.
 *   `src/`: Python sandbox verification engine.
     *   [agent.py](src/agent.py): Parsers and validators mapping actions to the YAML definitions.
     *   [main.py](src/main.py): Local CLI test simulation.
+    *   [policy_generator.py](src/policy_generator.py): Dynamic CLI prompt generator for custom policies.
 *   `index.html`: Interactive developer dashboard showing Blackwell telemetry, policy selectors, and a real-time guardrail shell validator.
 
 ---
 
-## 🛡️ Example Policy Specification: `secure-coder-policy.yaml`
+## 🛠️ CLI Utilities: Custom Policy Generator
 
-```yaml
-# Static Landlock boundaries applied at sandbox container creation
-filesystem:
-  allow_read:
-    - /workspace/my-project/**
-    - /usr/lib/**
-  allow_write:
-    - /workspace/my-project/src/**
-    - /workspace/my-project/tests/**
-    - /tmp/**
-  deny_read:
-    - /workspace/my-project/.env
-    - /workspace/my-project/secrets/**
+We have included a utility to build custom secure YAML profiles interactively from your terminal:
 
-process:
-  allow_binaries:
-    - /usr/bin/python3
-    - /usr/bin/node
-    - /usr/bin/git
-    - /usr/bin/npm
+```bash
+# Run the policy generator
+python src/policy_generator.py
+```
 
-network:
-  egress:
-    - destination: api.anthropic.com
-      ports: [443]
-      binary: /usr/bin/curl
-    - destination: '*.github.com'
-      ports: [443]
-      binary: /usr/bin/git
+### Prompt Interactive Flow:
+```text
+=================================================================
+🛠️ NVIDIA OpenShell policy-generator Utility
+=================================================================
+Generates secure declarative YAML profiles for local AI agents.
+
+Enter Agent Profile Name [custom-security-agent]: my-coder-agent
+Allowed Workspace Directory [/workspace/my-project]: /workspace/research-code
+
+Select Allowed binaries (comma-separated):
+Binaries [python3,git,curl]: python3,git
+
+Select Network egress domains (comma-separated):
+Allowed Egress Domains [api.anthropic.com,github.com]: github.com
+
+[OK] Successfully generated custom secure policy file!
+👉 Exported to: policies/my-coder-agent-policy.yaml
 ```
 
 ---
@@ -79,10 +112,6 @@ network:
 A zero-dependency Python mock sandbox is included to test agent actions against policies:
 
 ```bash
-# Clone the repository
-git clone https://github.com/karidasd/nvidia-openshell-agent-bootstrap.git
-cd nvidia-openshell-agent-bootstrap
-
 # Run the test simulation
 python src/main.py
 ```
@@ -90,18 +119,19 @@ python src/main.py
 ### Expected Output:
 ```text
 =================================================================
-🟢 NVIDIA OpenShell Agent Sandbox Local Simulator
+[ACTIVE] NVIDIA OpenShell Agent Sandbox Local Simulator
 =================================================================
 
-✅ Loaded policy: secure-coder-policy.yaml
+[LOADED] Policy: secure-coder-policy.yaml
    Allow Binaries: ['/usr/bin/python3', '/usr/bin/node', '/usr/bin/git', '/usr/bin/npm']
+   Egress Whitelists: ['api.anthropic.com', 'registry.npmjs.org', '*.github.com']
 
-👉 Request: Running '/usr/bin/python3'...
-   [🟢 ALLOWED] Binary '/usr/bin/python3' is allowed.
+-> Request: Running '/usr/bin/python3'...
+   [OK] ALLOWED: No policy constraint matched.
 
-👉 Request: Running '/usr/bin/python3' on '/workspace/my-project/.env'...
-   [🔴 BLOCKED] Read access to '/workspace/my-project/.env' explicitly denied by deny_read rules.
+-> Request: Running '/usr/bin/apt-get'...
+   [BLOCKED] BLOCKED: Binary '/usr/bin/apt-get' is not listed in allow_binaries configuration.
 
-👉 Request: Running '/usr/bin/curl' on 'api.anthropic.com'...
-   [🔴 BLOCKED] Binary '/usr/bin/curl' is not listed in allow_binaries configuration.
+-> Request: Running '/usr/bin/python3' on '/workspace/my-project/.env'...
+   [BLOCKED] BLOCKED: Read access to '/workspace/my-project/.env' explicitly denied by deny_read rules.
 ```

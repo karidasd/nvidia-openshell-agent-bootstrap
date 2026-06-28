@@ -44,24 +44,36 @@ By running open-source models (like Llama-3.1-70B, DeepSeek-Coder-V2, or Nemotro
 
 ## ⚙️ OpenShell Guardrails Validation Pipeline
 
-When an autonomous agent attempts an interface operation on the host, the OpenShell kernel-level validation flow executes:
+When an autonomous agent attempts an interface operation on the host, the OpenShell validation layer intercepts and validates the query against the active policy rules:
 
-```text
-[Agent Invocation]
-       │
-       ▼
-[Requested Action: e.g., cat /etc/hosts]
-       │
-       ├─► 1. Check Binary allowed_binaries? ────► [NO] ──► 🛑 BLOCKED (Permission Denied)
-       │                                                         │
-       ├─► 2. Check File allowed_read/write? ───► [NO] ──► 🛑 BLOCKED (Landlock Exception)
-       │                                                         │
-       └─► 3. Check Network egress domain? ──────► [NO] ──► 🛑 BLOCKED (Connection Refused)
-               │
-              [YES]
-               │
-               ▼
-   [ACTION PERMITTED & LOGGED]
+```mermaid
+graph TD
+    User([User / Agent Query]) --> OS[NVIDIA OpenShell Sandbox]
+    
+    subgraph Validation ["Enforcement Layer"]
+        OS --> FS{Landlock FS Guard}
+        OS --> Proc{Process Whitelist}
+        OS --> Net{Egress Netfilter}
+    end
+    
+    FS -->|Blocked| DenyFs[🛑 Terminate: Landlock Exception]
+    Proc -->|Blocked| DenyProc[🛑 Terminate: Exec Blocked]
+    Net -->|Blocked| DenyNet[🛑 Terminate: Egress Blocked]
+    
+    FS -->|Allowed| GPU[Local NVIDIA GB10 Blackwell GPU]
+    Proc -->|Allowed| GPU
+    Net -->|Allowed| EgressDest([Whitelisted Destination e.g., GitHub])
+    
+    subgraph LocalHardware ["DGX Spark Workstation"]
+        GPU --> Memory[128GB Unified Memory]
+        Memory --> LocalLLM[Local Offline LLM / Ollama]
+    end
+    
+    LocalLLM --> Output[Structured Result Output]
+    Output --> Logs[src/substack_bridge.py]
+    Logs --> Draft[substack_draft.md]
+    Draft -->|Git Push| GHA[GitHub Actions Runner]
+    GHA -->|Email-to-Post| Substack([Substack Newsletter])
 ```
 
 ---
@@ -76,6 +88,7 @@ When an autonomous agent attempts an interface operation on the host, the OpenSh
     *   [agent.py](src/agent.py): Parsers and validators mapping actions to the YAML definitions.
     *   [main.py](src/main.py): Local CLI test simulation.
     *   [policy_generator.py](src/policy_generator.py): Dynamic CLI prompt generator for custom policies.
+    *   [substack_bridge.py](src/substack_bridge.py): Compiles local agent log files and queries local Ollama to output markdown drafts directly in the root workspace.
 *   `index.html`: Interactive developer dashboard showing Blackwell telemetry, policy selectors, and a real-time guardrail shell validator.
 
 ---

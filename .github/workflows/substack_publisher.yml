@@ -1,0 +1,31 @@
+name: Publish to Substack
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Convert Markdown to HTML
+        id: md2html
+        run: |
+          npm install -g markdown-to-html
+          markdown-to-html README.md index.html
+
+      - name: Send Email to Substack
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com # Or your custom SMTP provider (SendGrid, Mailgun)
+          server_port: 465
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "New local AI workstation kit: NVIDIA DGX Spark & OpenShell!"
+          body: file://index.html
+          to: ${{ secrets.SUBSTACK_PUBLISH_EMAIL }} # Your secret Substack publishing address
+          from: ${{ secrets.EMAIL_SENDER }} # Your verified sender email
+          content_type: text/html

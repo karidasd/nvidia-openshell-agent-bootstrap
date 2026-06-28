@@ -1,0 +1,45 @@
+# NVIDIA OpenShell Security Policy
+# Target Profile: Secure Coder (Software Engineering Agent)
+# Enforcement Layer: Landlock FS & Egress Network Filtering
+
+filesystem:
+  allow_read:
+    - /workspace/my-project/**
+    - /usr/lib/**
+    - /usr/local/lib/**
+  allow_write:
+    - /workspace/my-project/src/**
+    - /workspace/my-project/tests/**
+    - /tmp/**
+  deny_read:
+    - /workspace/my-project/.env
+    - /workspace/my-project/secrets/**
+
+process:
+  allow_binaries:
+    - /usr/bin/python3
+    - /usr/bin/node
+    - /usr/bin/git
+    - /usr/bin/npm
+  deny_capabilities:
+    - CAP_SYS_ADMIN
+    - CAP_NET_RAW
+
+network:
+  egress:
+    - destination: api.anthropic.com
+      ports: [443]
+      binary: /usr/bin/curl
+    - destination: registry.npmjs.org
+      ports: [443]
+      binary: /usr/bin/npm
+    - destination: '*.github.com'
+      ports: [443]
+      binary: /usr/bin/git
+
+inference:
+  routes:
+    - pattern: '*.py'
+      backend: local/nemotron
+    - pattern: '*'
+      backend: anthropic/claude-sonnet

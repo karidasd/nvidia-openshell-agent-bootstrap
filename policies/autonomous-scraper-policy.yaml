@@ -1,0 +1,36 @@
+# NVIDIA OpenShell Security Policy
+# Target Profile: Autonomous Scraper (Data Ingestion Agent)
+# Enforcement Layer: Landlock FS & Granular Egress Whitelists
+
+filesystem:
+  allow_read:
+    - /workspace/scraper/**
+    - /usr/lib/**
+  allow_write:
+    - /workspace/scraper/raw_html/**
+    - /tmp/**
+
+process:
+  allow_binaries:
+    - /usr/bin/python3
+    - /usr/bin/curl
+  deny_capabilities:
+    - CAP_SYS_ADMIN
+    - CAP_NET_RAW
+
+network:
+  egress:
+    - destination: '*.wikipedia.org'
+      ports: [80, 443]
+      binary: /usr/bin/curl
+    - destination: '*.arxiv.org'
+      ports: [443]
+      binary: /usr/bin/curl
+    - destination: huggingface.co
+      ports: [443]
+      binary: /usr/bin/python3
+
+inference:
+  routes:
+    - pattern: '*'
+      backend: local/nemotron

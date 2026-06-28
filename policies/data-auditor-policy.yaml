@@ -1,0 +1,32 @@
+# NVIDIA OpenShell Security Policy
+# Target Profile: Data Auditor (Data Science & Analytics Agent)
+# Enforcement Layer: Landlock FS & Network Air-Gap Control
+
+filesystem:
+  allow_read:
+    - /workspace/data/**
+    - /workspace/notebooks/**
+    - /usr/lib/python3/**
+  allow_write:
+    - /workspace/notebooks/**
+    - /workspace/reports/**
+    - /tmp/**
+  deny_read:
+    - /workspace/config/database_creds.json
+    - /home/user/.ssh/**
+
+process:
+  allow_binaries:
+    - /usr/bin/python3
+    - /usr/bin/pip
+  deny_capabilities:
+    - CAP_SYS_ADMIN
+    - CAP_NET_RAW
+
+network:
+  egress: []  # Fully Air-Gapped: Blocks all outbound HTTP/TCP requests to prevent data exfiltration
+
+inference:
+  routes:
+    - pattern: '*'
+      backend: local/nemotron-4-340b  # Directs all inference to local offline hardware model in DGX Spark memory

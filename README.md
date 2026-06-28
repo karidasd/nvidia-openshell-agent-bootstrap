@@ -45,6 +45,23 @@ By running open-source models (like Llama-3.1-70B, DeepSeek-Coder-V2, or Nemotro
 
 ---
 
+## 🛡️ Security Architecture: OpenShell vs. Docker Containment
+
+Many developers ask: *Why do we need NVIDIA OpenShell if we can just wrap our agent inside a standard Docker container?*
+
+Here is the structural comparison of the sandboxing layers:
+
+1. **Docker Containment (User-space Virtualization)**:
+   * **Mechanism**: Creates isolated namespaces for files, network, and process IDs.
+   * **GPU Latency**: Direct hardware sharing requires installing the **NVIDIA Container Toolkit** which introduces complex configuration paths and minor driver call translation overhead.
+   * **Root Escape Vulnerability**: If the agent breaches the container runtime or is run with `--privileged` flags (common when testing local scripts that require system bindings), it gains root access to the host machine.
+2. **NVIDIA OpenShell (Kernel Landlock Integration)**:
+   * **Mechanism**: Executes **natively** on the host operating system but applies strict **Linux Landlock LSM** (Linux Security Module) rules directly to the process thread.
+   * **0% Latency Overhead**: The agent accesses the Blackwell GPU Tensor Cores and Triton Server at native hardware bus speeds without virtualization layers.
+   * **Granular Whitelisting**: Declarative policies strictly intercept filesystem reads/writes, subprocess spawns, and network ports dynamically.
+
+---
+
 ## ⚙️ OpenShell Guardrails Validation Pipeline
 
 When an autonomous agent attempts an interface operation on the host, the OpenShell validation layer intercepts and validates the query against the active policy rules:
@@ -92,6 +109,7 @@ graph TD
     *   [main.py](src/main.py): Local CLI test simulation.
     *   [policy_generator.py](src/policy_generator.py): Dynamic CLI prompt generator for custom policies.
     *   [substack_bridge.py](src/substack_bridge.py): Compiles local agent log files and queries local Ollama to output markdown drafts directly in the root workspace.
+    *   [red_team.py](src/red_team.py): Red-teaming penetration testing script simulating credentials exfiltration, network leaks, and capabilities escalations.
 *   `index.html`: Interactive developer dashboard showing Blackwell telemetry, policy selectors, and a real-time guardrail shell validator.
 
 ---
@@ -133,53 +151,34 @@ We have included a utility to build custom secure YAML profiles interactively fr
 python src/policy_generator.py
 ```
 
-### Prompt Interactive Flow:
-```text
-=================================================================
-🛠️ NVIDIA OpenShell policy-generator Utility
-=================================================================
-Generates secure declarative YAML profiles for local AI agents.
-
-Enter Agent Profile Name [custom-security-agent]: my-coder-agent
-Allowed Workspace Directory [/workspace/my-project]: /workspace/research-code
-
-Select Allowed binaries (comma-separated):
-Binaries [python3,git,curl]: python3,git
-
-Select Network egress domains (comma-separated):
-Allowed Egress Domains [api.anthropic.com,github.com]: github.com
-
-[OK] Successfully generated custom secure policy file!
-👉 Exported to: policies/my-coder-agent-policy.yaml
-```
-
 ---
 
-## ⚡ Running the Local Simulation
+## ⚡ Running the Local Simulation & Red-Team Audits
 
-A zero-dependency Python mock sandbox is included to test agent actions against policies:
+A zero-dependency Python mock sandbox is included to test agent actions against policies.
 
+### 1. Run policy validation tests:
 ```bash
-# Run the test simulation
 python src/main.py
 ```
 
-### Expected Output:
+### 2. Run red-team penetration audits:
+```bash
+python src/red_team.py
+```
+
+#### Expected Red-Team Audit Output:
 ```text
 =================================================================
-[ACTIVE] NVIDIA OpenShell Agent Sandbox Local Simulator
+[AUDIT] NVIDIA OpenShell Red-Teaming & Penetration Audit
 =================================================================
+Simulating hostile payloads attempting host takeover...
 
-[LOADED] Policy: secure-coder-policy.yaml
-   Allow Binaries: ['/usr/bin/python3', '/usr/bin/node', '/usr/bin/git', '/usr/bin/npm']
-   Egress Whitelists: ['api.anthropic.com', 'registry.npmjs.org', '*.github.com']
+-> [1/4] Running Exploit #1: Private Credentials Exfiltration...
+   Payload Target: /workspace/my-project/secrets/api_keys.json
+   [DEFENDED] Intercepted by OpenShell. Reason: Read access explicitly denied.
 
--> Request: Running '/usr/bin/python3'...
-   [OK] ALLOWED: No policy constraint matched.
-
--> Request: Running '/usr/bin/apt-get'...
-   [BLOCKED] BLOCKED: Binary '/usr/bin/apt-get' is not listed in allow_binaries configuration.
-
--> Request: Running '/usr/bin/python3' on '/workspace/my-project/.env'...
-   [BLOCKED] BLOCKED: Read access to '/workspace/my-project/.env' explicitly denied by deny_read rules.
+-> [2/4] Running Exploit #2: Host SSH Keys Takeover...
+   Payload Target: /home/user/.ssh/id_rsa
+   [DEFENDED] Intercepted by OpenShell. Reason: Read access blocked.
 ```
